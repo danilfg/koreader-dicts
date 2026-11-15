@@ -13,4 +13,4 @@ export const SITE_URL = (
 ).replace(/\/$/, "");
 
 export const RELEASES_BASE =
-  process.env.NEXT_PUBLIC_RELEASES_BASE ?? "https://github.com/DanielGregorini/koreader-dicts/releases/latest/download";
+  process.env.NEXT_PUBLIC_RELEASES_BASE ?? "https://github.com/danilfg/koreader-dicts/releases/latest/download";
