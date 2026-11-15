@@ -1,5 +1,9 @@
 name: Mirror dictionary ZIP files
 on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/mirror-upstream-release.yml
   workflow_dispatch:
     inputs:
       tag:
@@ -16,7 +20,7 @@ jobs:
     timeout-minutes: 120
     env:
       GH_TOKEN: ${{ github.token }}
-      TAG: ${{ inputs.tag }}
+      TAG: ${{ inputs.tag || 'v1.3.0' }}
     steps:
       - uses: actions/checkout@v4
         with:
