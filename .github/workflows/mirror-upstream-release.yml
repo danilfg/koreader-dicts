@@ -1,0 +1,74 @@
+name: Mirror dictionary ZIP files
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Upstream tag
+        required: true
+        default: v1.3.0
+        type: string
+permissions:
+  contents: write
+jobs:
+  mirror:
+    if: github.repository == 'danilfg/koreader-dicts'
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: ${{ inputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Download and validate original release
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || exit 1
+          mkdir -p "$RUNNER_TEMP/dicts"
+          expected=$(gh api "repos/DanielGregorini/koreader-dicts/releases/tags/$TAG" --jq '[.assets[] | select(.name | endswith(".zip"))] | length')
+          test "$expected" -gt 0
+          gh release download "$TAG" --repo DanielGregorini/koreader-dicts --pattern '*.zip' --dir "$RUNNER_TEMP/dicts"
+          count=$(find "$RUNNER_TEMP/dicts" -maxdepth 1 -name '*.zip' -type f | wc -l | tr -d ' ')
+          test "$count" = "$expected"
+          (cd "$RUNNER_TEMP/dicts" && sha256sum -- *.zip > SHA256SUMS)
+      - name: Publish archives to fork
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! gh release view "$TAG" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release create "$TAG" -R "$GITHUB_REPOSITORY" --draft \
+              --title "Dictionaries $TAG (mirror)" \
+              --notes "Independent mirror of DanielGregorini/koreader-dicts. Each original ZIP contains LICENSE and ATTRIBUTION. Third-party sources retain their original credits and licenses."
+          fi
+          gh release upload "$TAG" "$RUNNER_TEMP/dicts"/*.zip "$RUNNER_TEMP/dicts/SHA256SUMS" -R "$GITHUB_REPOSITORY" --clobber
+          expected=$(find "$RUNNER_TEMP/dicts" -maxdepth 1 -name '*.zip' -type f | wc -l | tr -d ' ')
+          published=$(gh release view "$TAG" -R "$GITHUB_REPOSITORY" --json assets --jq '[.assets[] | select(.name | endswith(".zip"))] | length')
+          test "$published" = "$expected"
+          gh release edit "$TAG" -R "$GITHUB_REPOSITORY" --draft=false
+      - name: Retarget links only after successful publication
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          readme = Path('README.md')
+          before = 'https://github.com/DanielGregorini/koreader-dicts/releases/latest/download/'
+          after = 'https://github.com/danilfg/koreader-dicts/releases/latest/download/'
+          readme.write_text(readme.read_text().replace(before, after))
+          source = Path('web/koreader-dicts/src/lib/repo.ts')
+          s = source.read_text()
+          old = 'process.env.NEXT_PUBLIC_RELEASES_BASE ?? ' + chr(96) + '$' + '{REPO_URL}/releases/latest/download' + chr(96)
+          new = 'process.env.NEXT_PUBLIC_RELEASES_BASE ?? "https://github.com/danilfg/koreader-dicts/releases/latest/download"'
+          if old not in s and new not in s:
+              raise RuntimeError('Unexpected website URL code; inspect manually')
+          source.write_text(s.replace(old, new))
+          PY
+          if ! git diff --quiet -- README.md web/koreader-dicts/src/lib/repo.ts; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add README.md web/koreader-dicts/src/lib/repo.ts
+            git commit -m "Use fork release mirrors for dictionary downloads"
+            git push origin HEAD:main
+          fi
