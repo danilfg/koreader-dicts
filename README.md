@@ -6,7 +6,7 @@ Look a word up while reading and get a real definition, not a blank popup.
 Inflected forms are indexed, so tapping *wielded* finds *wield*, and tapping
 *geese* finds *goose*.
 
-**[Browse all dictionaries →](https://danielgregorini.github.io/koreader-dicts/)**
+**[Browse all dictionaries →](https://danilfg.github.io/koreader-dicts/)**
 
 Not affiliated with the KOReader project.
 
@@ -95,7 +95,7 @@ Coverage is the share of the 10,000 most frequent words in the source language
 that a lookup resolves, inflected forms included — measured against a
 subtitle-corpus frequency list, not estimated. Japanese, Chinese and Latin
 have no published list. Full measurements for each dictionary are on the
-[site](https://danielgregorini.github.io/koreader-dicts/).
+[site](https://danilfg.github.io/koreader-dicts/).
 
 ## Install
 
