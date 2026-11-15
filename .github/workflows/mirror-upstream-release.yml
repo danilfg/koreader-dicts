@@ -59,11 +59,21 @@ jobs:
           readme.write_text(readme.read_text().replace(before, after))
           source = Path('web/koreader-dicts/src/lib/repo.ts')
           s = source.read_text()
-          old = 'process.env.NEXT_PUBLIC_RELEASES_BASE ?? ' + chr(96) + '$' + '{REPO_URL}/releases/latest/download' + chr(96)
+          old = 'process.env.NEXT_PUBLIC_RELEASES_BASE ?? ' + chr(96) + '
+          PY
+          if ! git diff --quiet -- README.md web/koreader-dicts/src/lib/repo.ts; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add README.md web/koreader-dicts/src/lib/repo.ts
+            git commit -m "Use fork release mirrors for dictionary downloads"
+            git push origin HEAD:main
+          fi
+ + '{REPO_URL}/releases/latest/download' + chr(96)
+          direct_original = 'process.env.NEXT_PUBLIC_RELEASES_BASE ?? "https://github.com/DanielGregorini/koreader-dicts/releases/latest/download"'
           new = 'process.env.NEXT_PUBLIC_RELEASES_BASE ?? "https://github.com/danilfg/koreader-dicts/releases/latest/download"'
-          if old not in s and new not in s:
+          if old not in s and direct_original not in s and new not in s:
               raise RuntimeError('Unexpected website URL code; inspect manually')
-          source.write_text(s.replace(old, new))
+          source.write_text(s.replace(old, new).replace(direct_original, new))
           PY
           if ! git diff --quiet -- README.md web/koreader-dicts/src/lib/repo.ts; then
             git config user.name "github-actions[bot]"
